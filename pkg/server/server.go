@@ -1,6 +1,7 @@
 package server
 
 import (
+	"final/v1/pkg/api"
 	"log"
 	"net/http"
 	"os"
@@ -10,6 +11,8 @@ import (
 const defaultPort = 7540
 
 func ServerRun() {
+	api.Init()
+
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
 		port = strconv.Itoa(defaultPort)

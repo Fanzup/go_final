@@ -14,6 +14,7 @@ func main() {
 	if err := db.InitDB(findDB()); err != nil {
 		log.Fatal("DB is not init! ", err)
 	}
+	log.Println("DB is init!")
 
 	server.ServerRun()
 }
