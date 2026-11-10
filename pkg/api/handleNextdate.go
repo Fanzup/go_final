@@ -10,6 +10,10 @@ import (
 const dateFormat = "20060102"
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
 	nowStr := r.FormValue("now")
 	dateStr := r.FormValue("date")
 	repeat := r.FormValue("repeat")

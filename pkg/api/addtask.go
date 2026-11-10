@@ -14,28 +14,31 @@ import (
 func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
 
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		writeJSON(w, map[string]string{"error": "invalid JSON: " + err.Error()})
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&task); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
 
 	if task.Title == "" {
-		writeJSON(w, map[string]string{"error": "task title is required"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "task title is required"})
 		return
 	}
 
 	if err := checkDate(&task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	id, err := db.AddTask(&task)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
-	writeJSON(w, map[string]string{"id": strconv.FormatInt(id, 10)})
+	writeJSON(w, http.StatusOK, map[string]string{"id": strconv.FormatInt(id, 10)})
 }
 
 func checkDate(task *db.Task) error {
@@ -58,7 +61,7 @@ func checkDate(task *db.Task) error {
 		}
 	}
 
-	if afterNow(now, t) {
+	if isBeforeToday(t, now) {
 		if task.Repeat == "" {
 			task.Date = now.Format(dateFormat)
 		} else {
@@ -69,10 +72,10 @@ func checkDate(task *db.Task) error {
 	return nil
 }
 
-func afterNow(date, now time.Time) bool {
-	dy, dm, dd := date.Date()
-	ny, nm, nd := now.Date()
+func isBeforeToday(value, today time.Time) bool {
+	dy, dm, dd := value.Date()
+	ny, nm, nd := today.Date()
 	d := time.Date(dy, dm, dd, 0, 0, 0, 0, time.UTC)
 	n := time.Date(ny, nm, nd, 0, 0, 0, 0, time.UTC)
-	return d.After(n)
+	return d.Before(n)
 }

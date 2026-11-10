@@ -20,7 +20,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return "", err
 	}
 
-	parts := strings.Split(repeat, " ")
+	parts := strings.Fields(repeat)
 	switch parts[0] {
 	case "d":
 		return nextDaily(now, date, parts)
