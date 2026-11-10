@@ -17,7 +17,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	search := r.URL.Query().Get("search")
 
-	tasks, err := db.Tasks(50, search)
+	tasks, err := db.Tasks(r.Context(), 50, search)
 	if err != nil {
 		writeDBError(w, err)
 		return

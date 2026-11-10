@@ -29,7 +29,7 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.UpdateTask(&task); err != nil {
+	if err := db.UpdateTask(r.Context(), &task); err != nil {
 		writeDBError(w, err)
 		return
 	}

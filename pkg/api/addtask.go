@@ -25,7 +25,7 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := db.AddTask(&task)
+	id, err := db.AddTask(r.Context(), &task)
 	if err != nil {
 		writeDBError(w, err)
 		return

@@ -137,6 +137,25 @@ func nextMonthly(now, date time.Time, parts []string) (string, error) {
 		}
 	}
 
+	// проверяем, есть ли такой день хотя бы в одном выбранном месяце
+	possible := lastDay || prevLastDay
+	for m := 1; m <= 12 && !possible; m++ {
+		if hasMonths && !month[m] {
+			continue
+		}
+		// високосный год учитывает допустимое 29 февраля
+		last := lastDayOfMonth(time.Date(2000, time.Month(m), 1, 0, 0, 0, 0, time.UTC))
+		for d := 1; d <= last; d++ {
+			if day[d] {
+				possible = true
+				break
+			}
+		}
+	}
+	if !possible {
+		return "", errors.New("m: no matching calendar date")
+	}
+
 	// календарь повторяется через 400 лет — дальше искать бессмысленно
 	if afterNow(now, date) {
 		date = calendarDay(now)

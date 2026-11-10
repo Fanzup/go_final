@@ -19,20 +19,20 @@ type Task struct {
 	Repeat  string `json:"repeat"`
 }
 
-func AddTask(task *Task) (int64, error) {
+func AddTask(ctx context.Context, task *Task) (int64, error) {
 	query := `INSERT INTO scheduler (date, title, comment, repeat) VALUES (?,?,?,?)`
-	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
+	res, err := db.ExecContext(ctx, query, task.Date, task.Title, task.Comment, task.Repeat)
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
 }
 
-func GetTask(id string) (*Task, error) {
+func GetTask(ctx context.Context, id string) (*Task, error) {
 	var t Task
 	query := `SELECT CAST(id AS TEXT), date, title, comment, repeat
 	          FROM scheduler WHERE id = ?`
-	err := db.QueryRow(query, id).Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
+	err := db.QueryRowContext(ctx, query, id).Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrTaskNotFound
@@ -42,9 +42,9 @@ func GetTask(id string) (*Task, error) {
 	return &t, nil
 }
 
-func UpdateTask(task *Task) error {
+func UpdateTask(ctx context.Context, task *Task) error {
 	query := `UPDATE scheduler SET date = ?, title = ?, comment = ?, repeat = ? WHERE id = ?`
-	res, err := db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
+	res, err := db.ExecContext(ctx, query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func UpdateTask(task *Task) error {
 	return nil
 }
 
-func DeleteTask(id string) error {
-	res, err := db.Exec(`DELETE FROM scheduler WHERE id = ?`, id)
+func DeleteTask(ctx context.Context, id string) error {
+	res, err := db.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func DeleteTask(id string) error {
 	return nil
 }
 
-func Tasks(limit int, search string) ([]*Task, error) {
+func Tasks(ctx context.Context, limit int, search string) ([]*Task, error) {
 	if limit < 1 {
 		return []*Task{}, nil
 	}
@@ -91,7 +91,7 @@ func Tasks(limit int, search string) ([]*Task, error) {
 	}
 	query += ` ORDER BY date, id LIMIT ?`
 	args = append(args, limit)
-	rows, err := db.Query(query, args...)
+	rows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

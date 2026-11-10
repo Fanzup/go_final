@@ -13,7 +13,7 @@ func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := db.GetTask(id)
+	task, err := db.GetTask(r.Context(), id)
 	if err != nil {
 		writeDBError(w, err)
 		return

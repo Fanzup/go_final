@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.log
+*.tmp
+*.test
+coverage*
+scheduler

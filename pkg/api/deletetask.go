@@ -13,7 +13,7 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.DeleteTask(id); err != nil {
+	if err := db.DeleteTask(r.Context(), id); err != nil {
 		writeDBError(w, err)
 		return
 	}
