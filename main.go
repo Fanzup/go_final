@@ -1,22 +1,31 @@
 package main
 
 import (
-	"final/v1/pkg/db"
-	"final/v1/pkg/server"
 	"log"
 	"os"
+
+	"final/v1/pkg/db"
+	"final/v1/pkg/server"
 )
 
 const defaultFileDB = "scheduler.db"
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
 
+func run() error {
+
+	// поднимаем БД
 	if err := db.InitDB(findDB()); err != nil {
-		log.Fatal("DB is not init! ", err)
+		return err
 	}
 	log.Println("DB is init!")
 
-	server.ServerRun()
+	defer db.Close()
+	return server.ServerRun()
 }
 
 func findDB() string {

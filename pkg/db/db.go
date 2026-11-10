@@ -2,8 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"log"
-	"os"
 
 	_ "modernc.org/sqlite"
 )
@@ -22,30 +20,24 @@ CREATE INDEX IF NOT EXISTS idx_scheduler_date ON scheduler(date);
 var db *sql.DB
 
 func InitDB(fileDB string) error {
-	_, err := os.Stat(fileDB)
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	install := os.IsNotExist(err)
-
-	db, err = sql.Open("sqlite", fileDB)
+	conn, err := sql.Open("sqlite", fileDB)
 	if err != nil {
 		return err
 	}
-
-	if err = db.Ping(); err != nil {
-		_ = db.Close()
+	// одно соединение: операции с БД идут по очереди
+	conn.SetMaxOpenConns(1)
+	// создаём таблицу и индекс, если их ещё нет
+	if _, err := conn.Exec(schema); err != nil {
+		_ = conn.Close()
 		return err
 	}
-
-	if install {
-		if _, err = db.Exec(schema); err != nil {
-			_ = db.Close()
-			return err
-		}
-		log.Println("DB is init!")
-	}
-
+	db = conn
 	return nil
+}
 
+func Close() error {
+	if db == nil {
+		return nil
+	}
+	return db.Close()
 }

@@ -14,7 +14,7 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.DeleteTask(id); err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		writeDBError(w, err)
 		return
 	}
 

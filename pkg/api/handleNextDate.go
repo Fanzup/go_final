@@ -11,7 +11,7 @@ const dateFormat = "20060102"
 
 func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		methodNotAllowed(w, "GET")
 		return
 	}
 	nowStr := r.FormValue("now")

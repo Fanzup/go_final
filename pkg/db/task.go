@@ -1,11 +1,15 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
+
+	"final/v1/pkg/date"
 )
+
+var ErrTaskNotFound = errors.New("task not found")
 
 type Task struct {
 	ID      string `json:"id"`
@@ -31,7 +35,7 @@ func GetTask(id string) (*Task, error) {
 	err := db.QueryRow(query, id).Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("task not found")
+			return nil, ErrTaskNotFound
 		}
 		return nil, err
 	}
@@ -49,7 +53,7 @@ func UpdateTask(task *Task) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("incorrect id for updating task")
+		return ErrTaskNotFound
 	}
 	return nil
 }
@@ -64,40 +68,30 @@ func DeleteTask(id string) error {
 		return err
 	}
 	if count == 0 {
-		return fmt.Errorf("incorrect id for deleting task")
-	}
-	return nil
-}
-
-func UpdateDate(next string, id string) error {
-	res, err := db.Exec(`UPDATE scheduler SET date = ? WHERE id = ?`, next, id)
-	if err != nil {
-		return err
-	}
-	count, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return fmt.Errorf("incorrect id for updating date")
+		return ErrTaskNotFound
 	}
 	return nil
 }
 
 func Tasks(limit int, search string) ([]*Task, error) {
-	query := `SELECT CAST(id AS TEXT), date, title, comment, repeat
-	          FROM scheduler
-	          WHERE (? = '' OR title LIKE ? OR comment LIKE ? OR date = ?)
-	          ORDER BY date LIMIT ?`
-
-	pattern := "%" + search + "%"
-
-	dateSearch := search
-	if t, err := time.Parse("02.01.2006", search); err == nil {
-		dateSearch = t.Format("20060102")
+	if limit < 1 {
+		return []*Task{}, nil
 	}
-
-	rows, err := db.Query(query, search, pattern, pattern, dateSearch, limit)
+	query := `SELECT CAST(id AS TEXT), date, title, comment, repeat FROM scheduler`
+	args := []any{}
+	if search != "" {
+		if t, err := time.Parse("02.01.2006", search); err == nil {
+			query += ` WHERE date = ?`
+			args = append(args, t.Format("20060102"))
+		} else {
+			query += ` WHERE title LIKE ? OR comment LIKE ?`
+			pattern := "%" + search + "%"
+			args = append(args, pattern, pattern)
+		}
+	}
+	query += ` ORDER BY date, id LIMIT ?`
+	args = append(args, limit)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,4 +106,35 @@ func Tasks(limit int, search string) ([]*Task, error) {
 		tasks = append(tasks, &t)
 	}
 	return tasks, rows.Err()
+}
+
+// читаем и завершаем задачу в одной транзакции
+func CompleteTask(ctx context.Context, id string, now time.Time) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var task Task
+	err = tx.QueryRowContext(ctx, `SELECT date, repeat FROM scheduler WHERE id = ?`, id).Scan(&task.Date, &task.Repeat)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrTaskNotFound
+	}
+	if err != nil {
+		return err
+	}
+	// одноразовую удаляем, повторяющуюся переносим
+	if task.Repeat == "" {
+		_, err = tx.ExecContext(ctx, `DELETE FROM scheduler WHERE id = ?`, id)
+	} else {
+		next, dateErr := date.NextDate(now, task.Date, task.Repeat)
+		if dateErr != nil {
+			return dateErr
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE scheduler SET date = ? WHERE id = ?`, next, id)
+	}
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }

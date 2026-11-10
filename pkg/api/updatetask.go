@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"final/v1/pkg/db"
@@ -10,7 +9,7 @@ import (
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var task db.Task
 
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	if err := decodeJSON(w, r, &task); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
 		return
 	}
@@ -31,7 +30,7 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := db.UpdateTask(&task); err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
+		writeDBError(w, err)
 		return
 	}
 

@@ -1,8 +1,9 @@
 package api
 
 import (
-	"final/v1/pkg/db"
 	"net/http"
+
+	"final/v1/pkg/db"
 )
 
 type TasksResp struct {
@@ -10,11 +11,15 @@ type TasksResp struct {
 }
 
 func tasksHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, "GET")
+		return
+	}
 	search := r.URL.Query().Get("search")
 
 	tasks, err := db.Tasks(50, search)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeDBError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, TasksResp{Tasks: tasks})

@@ -1,17 +1,19 @@
 package server
 
 import (
-	"final/v1/pkg/api"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"final/v1/pkg/api"
 )
 
 const defaultPort = 7540
 
-func ServerRun() {
+func ServerRun() error {
 	mux := http.NewServeMux()
 	api.Init(mux)
 
@@ -22,11 +24,12 @@ func ServerRun() {
 
 	portNumber, err := strconv.Atoi(port)
 	if err != nil || portNumber < 1 || portNumber > 65535 {
-		log.Fatalf("invalid TODO_PORT: %q", port)
+		return fmt.Errorf("invalid TODO_PORT: %q", port)
 	}
 	addr := ":" + strconv.Itoa(portNumber)
 	webDir := "./web"
 
+	// отдаём файлы фронтенда
 	mux.Handle("/", http.FileServer(http.Dir(webDir)))
 	server := &http.Server{
 		Addr:         addr,
@@ -38,7 +41,7 @@ func ServerRun() {
 
 	log.Printf("Server is running - port=%s", port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+		return err
 	}
-
+	return nil
 }
